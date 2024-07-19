@@ -1,4 +1,3 @@
-#Objetivo: carregar
 def loadAutomato(file):
     #ToDo carregar o autmato a partir de um arquivo txt
     #definição do automato {alfabeto = list(chars)
@@ -7,6 +6,10 @@ def loadAutomato(file):
     #                        estadosFinais = list(str)
     #                        transicoes = dict{estado:dict{char:list(estado)}} <- list(estados) caso seja AFN
 
+    return
+
+def AFNtoAFD(afn):
+    #ToDo
     return
 
 def runAFD(automato, palavra):
