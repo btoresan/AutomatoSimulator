@@ -1,24 +1,122 @@
-def loadAutomato(file):
-    # ToDo carregar o autmato a partir de um arquivo txt
+import sys, re
 
-    # Definição dos autômatos
-    # afd: {    alfabeto: list
-    #           estados: list
-    #           estadoInicial: str
-    #           estadosFinais: list
-    #           transicoes: {   estado: {   simbolo: str/tuple } }
-    # afn: {    alfabeto: list
-    #           estados: list
-    #           estadoInicial: str
-    #           estadosFinais: list
-    #           transicoes: {   estado: {   simbolo: list } } 
+# Definição dos autômatos
+# afd: {    nome: str
+#           alfabeto: list
+#           estados: list
+#           estadoInicial: str
+#           estadosFinais: list
+#           transicoes: {   estado: {   simbolo: str/tuple } }
+# afn: {    nome: str
+#           alfabeto: list
+#           estados: list
+#           estadoInicial: str
+#           estadosFinais: list
+#           transicoes: {   estado: {   simbolo: list } }
 
-    return
+def loadAFN(file):
+
+    # Processa primeira linha do arquivo
+
+    # Divide linha no '='
+    first_line = file.readline().split('=', maxsplit=1)
+
+    nome = first_line[0]
+
+    # Expressão regular para separar os campos
+    pattern = r'\{([^}]*)\}|\b(\w+)\b'
+
+    # Para cada campo gera par (a, b)
+    # a: string com termo entre {}
+    # b: string com termo isolado
+    # Ex: {q0, q1, q2} -> ('q0,q1,q2','')
+    # Ex: q0 -> ('', 'q0')
+    campos = re.findall(pattern, first_line[1])
+
+    # Processa os campos
+    for i, campo in enumerate(campos):
+        items = campo[0].split(',')
+
+        match i:
+            case 0:
+                alfabeto = items
+
+            case 1:
+                estados = items
+
+            case 2:
+                inicial = campo[1]
+
+            case 3:
+                finais = items
+
+    # Lê linha "Prog"
+    file.readline()
+
+    # Inicializa campos de transicoes
+    transicoes = {}
+    for estado in estados:
+        transicoes[estado] = {}
+
+    # Processa demais linhas (transições)
+    for line in file:
+        # Divide linha no '='
+        prog_line = line.rsplit('=', maxsplit=1)
+
+        # Remove delimitadores
+        partida = prog_line[0][1:-1].split(',', maxsplit=1)
+        estado_chegada = prog_line[1][1:-2].split(',')
+
+        estado_partida = partida[0]
+        simbolo = partida[1]
+
+        # Monta transição
+        transicoes[estado_partida][simbolo] = estado_chegada
+
+    # Salva informações no automato
+    automato = { 'nome': nome,
+                 'alfabeto': alfabeto,
+                 'estados': estados,
+                 'estadoInicial': inicial,
+                 'estadosFinais': finais,
+                 'transicoes': transicoes }
+
+    return automato
+
+# Recebe lista e devolve string formatada como conjunto
+def montaConjunto(itens):
+    return '{' + ','.join(itens) + '}'
+
+def storeAFD(file, afd):
+
+    # Escreve primeira linha
+    nome = afd['nome']
+    alfabeto = montaConjunto(afd['alfabeto'])
+    estados = montaConjunto(afd['estados'])
+    inicial = afd['estadoInicial']
+    finais = montaConjunto(afd['estadosFinais'])
+    first_line = nome + '=' + '(' + alfabeto + ',' + estados + ',' + inicial + ',' + finais + ')'
+    file.write(first_line + '\n')
+
+    # Escreve linha "Prog"
+    file.write("Prog\n")
+
+    # Escreve transições
+    for estado_partida in afd['transicoes']:
+
+        for simbolo, estado_chegada in afd['transicoes'][estado_partida].items():
+            partida = '(' + estado_partida + ',' + simbolo + ')'
+            chegada = '{' + estado_chegada + '}'
+            transicao = partida + '=' + chegada + '\n'
+
+            file.write(transicao)
+
+    return file
 
 def AFNtoAFD(afn):
-   
+
     afd = afn.copy()
- 
+
     # Cria tabela para adicionar estados determinizados 
     tabela = {}
     for estado in afn['estados']:
@@ -30,9 +128,9 @@ def AFNtoAFD(afn):
             except Exception:
                 pass
             tabela[estado][simbolo] = valor
- 
+
     # Passa pela tabela adicionando novos estados 
-    estados_adicionados = []     
+    estados_adicionados = []
     mudanca = True
     while mudanca:
         mudanca = False
@@ -48,7 +146,7 @@ def AFNtoAFD(afn):
                     except KeyError:
                         pass
                 tabela[novo_estado][simbolo] = valor
-       
+
         # Passa procurando novos estados para determinizar 
         estados_adicionados.clear()
         for estado in tabela:
@@ -61,7 +159,7 @@ def AFNtoAFD(afn):
                     continue
                 estados_adicionados.append(novo_estado)
                 mudanca = True
-    
+
     afd['transicoes'].clear() 
     for estado in tabela:
         afd['transicoes'][estado] = {}
@@ -76,7 +174,7 @@ def AFNtoAFD(afn):
 
         if not isinstance(estado, tuple) or estado in afd['estados']:
            continue
-        
+
         afd['estados'].append(estado)
         for sub_estado in estado:
             if sub_estado in afd['estadosFinais']:
@@ -94,25 +192,46 @@ def runAFD(automato, palavra):
             estado_atual = automato['transicoes'][estado_atual][letra]
         else:
             return False
-        
+
     if estado_atual in automato['estadosFinais']:
         return True
     else:
         return False
 
+def testrunAFD(automato):
+
+    print("Teste true: GPT")
+    print(runAFD(automato, "GPT"))
+
+    print("Teste false: gpt")
+    print(runAFD(automato, "gpt"))
+
+    print("Teste false: A")
+    print(runAFD(automato, "A"))
+
 if __name__ == "__main__":
 
-    #listas com o alfabeto em maiusculo e minusculo
-    alfabeto_az = [chr(i) for i in range(ord('a'), ord('z')+1)]
-    alfabeto_AZ = [chr(i) for i in range(ord('A'), ord('Z')+1)]
+    # Imprime mensagem de ajuda
+    if len(sys.argv) == 1 or sys.argv[1][0] == '-':
+        print("Use:", sys.argv[0], "AFN AFD")
+        sys.exit()
 
-    #definição do automato já no codigo (o que eu mandei foro do caderno amarelo no grupo)
-    automato = { 'alfabeto': alfabeto_az + alfabeto_AZ,
-                 'estados': ['q0','q1','q2'],
-                 'estadoInicial': 'q0',
-                 'estadosFinais': ['q2'],
-                 'transicoes': {'q0': {letter: 'q1' for letter in alfabeto_AZ},
-                                'q1': {letter: 'q2' for letter in alfabeto_AZ},
-                                'q2': {letter: 'q2' for letter in alfabeto_AZ}}}
-    
-    print(runAFD(automato, "gpt"))
+    # Abre arquivo do AFN
+    try:
+        with open(sys.argv[1]) as file:
+            # Carrega autômato a partir do arquivo
+            afn = loadAFN(file)
+
+    except FileNotFoundError:
+        print("Arquivo do AFN não encontrado")
+        sys.exit()
+        
+    afd = AFNtoAFD(afn)
+
+    testrunAFD(afd)
+
+    # Abre arquivo do AFD
+    with open(sys.argv[2], 'w') as file:
+
+        # Salva autômato no arquivo
+        storeAFD(file, afd)
