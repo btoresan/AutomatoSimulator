@@ -83,6 +83,21 @@ def loadAFN(file):
 
     return automato
 
+# Recebe estado e codifica-o como string (concatenando estados se for tupla)
+def converteEstado(estado):
+    if isinstance(estado, tuple):
+        return ''.join(converteEstados(estado))
+    else:
+        return estado
+
+# Recebe lista/tupla de estados e devolve conjunto com todos estados codificados como string
+def converteEstados(estados):
+    n = []
+    for estado in estados:
+        n.append(converteEstado(estado))
+
+    return sorted(set(n))
+
 # Recebe lista e devolve string formatada como conjunto
 def montaConjunto(itens):
     return '{' + ','.join(itens) + '}'
@@ -92,9 +107,9 @@ def storeAFD(file, afd):
     # Escreve primeira linha
     nome = afd['nome']
     alfabeto = montaConjunto(afd['alfabeto'])
-    estados = montaConjunto(afd['estados'])
-    inicial = afd['estadoInicial']
-    finais = montaConjunto(afd['estadosFinais'])
+    estados = montaConjunto(converteEstados(afd['estados']))
+    inicial = converteEstado(afd['estadoInicial'])
+    finais = montaConjunto(converteEstados(afd['estadosFinais']))
     first_line = nome + '=' + '(' + alfabeto + ',' + estados + ',' + inicial + ',' + finais + ')'
     file.write(first_line + '\n')
 
@@ -105,8 +120,8 @@ def storeAFD(file, afd):
     for estado_partida in afd['transicoes']:
 
         for simbolo, estado_chegada in afd['transicoes'][estado_partida].items():
-            partida = '(' + estado_partida + ',' + simbolo + ')'
-            chegada = '{' + estado_chegada + '}'
+            partida = '(' + converteEstado(estado_partida) + ',' + simbolo + ')'
+            chegada = '{' + converteEstado(estado_chegada) + '}'
             transicao = partida + '=' + chegada + '\n'
 
             file.write(transicao)
@@ -198,22 +213,21 @@ def runAFD(automato, palavra):
     else:
         return False
 
-def testrunAFD(automato):
 
-    print("Teste true: GPT")
-    print(runAFD(automato, "GPT"))
+def runAFDPalavras(file, afd):
+    palavras = file.readline().split(',')
 
-    print("Teste false: gpt")
-    print(runAFD(automato, "gpt"))
-
-    print("Teste false: A")
-    print(runAFD(automato, "A"))
+    for palavra in palavras:
+        if runAFD(afd, palavra):
+            print(palavra + ': Aceita')
+        else:
+            print(palavra + ': Rejeita')
 
 if __name__ == "__main__":
 
     # Imprime mensagem de ajuda
-    if len(sys.argv) == 1 or sys.argv[1][0] == '-':
-        print("Use:", sys.argv[0], "AFN AFD")
+    if len(sys.argv) < 4 or sys.argv[1][0] == '-':
+        print("Use:", sys.argv[0], "AFN AFD lista_de_palavras")
         sys.exit()
 
     # Abre arquivo do AFN
@@ -228,10 +242,16 @@ if __name__ == "__main__":
         
     afd = AFNtoAFD(afn)
 
-    testrunAFD(afd)
-
     # Abre arquivo do AFD
     with open(sys.argv[2], 'w') as file:
 
         # Salva autômato no arquivo
         storeAFD(file, afd)
+
+    try:
+        with open(sys.argv[3]) as file:
+            runAFDPalavras(file, afd)
+
+    except FileNotFoundError:
+        print("Arquivo da lista de palavras não encontrado")
+        sys.exit()
