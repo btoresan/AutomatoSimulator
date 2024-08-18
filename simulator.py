@@ -242,15 +242,14 @@ def runAFDfile(file, afd):
 
 if __name__ == "__main__":
 
-    # Imprime mensagem de ajuda
-    if len(sys.argv) < 4:
-        print("Indique os arquivos necessários:")
-        print(sys.argv[0], "AFN AFD lista_de_palavras")
-        sys.exit()
+    #argv[1] = AFN
+    #argv[2] = AFD
+    #argv[3] = lista de palavras
 
     # Carrega AFN a partir do arquivo
     try:
-        with open(sys.argv[1]) as file:
+        afn_file = input("Insira o caminho completo do arquivo do AFN: ")
+        with open(afn_file) as file:
             afn = loadAFN(file)
 
     except FileNotFoundError:
@@ -261,12 +260,14 @@ if __name__ == "__main__":
     afd = AFNtoAFD(afn)
 
     # Salva AFD no arquivo
-    with open(sys.argv[2], 'w') as file:
+    afd_file = input("Insira o caminho completo do arquivo para salvar AFD: ")
+    with open(afd_file, 'w') as file:
         storeAFD(file, afd)
 
     # Imprime palavras da lista aceitas pelo AFD
     try:
-        with open(sys.argv[3]) as file:
+        words_file = input("Insira o caminho completo do arquivo da lista de palavras: ")
+        with open(words_file) as file:
             runAFDfile(file, afd)
 
     except FileNotFoundError:
